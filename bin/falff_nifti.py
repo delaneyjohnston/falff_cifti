@@ -87,7 +87,7 @@ try:
     mask = (nib.load(maskfile)).get_data()
 except:
     #2. manually create mask 
-    mask = np.where(func_data > (np.std(func_data, axis=(0, 1, 2))), func_data, 0)
+    mask = np.std(func_data, axis=3)
 
     
 #define affine array
