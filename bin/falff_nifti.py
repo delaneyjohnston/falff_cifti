@@ -82,12 +82,12 @@ func_data = func_img.get_data()
 
 #if given input of mask, load in mask file
 #OR if not given input of mask, create mask using std 
-try:
+if maskfile:
     #1. given input of mask file
     mask = (nib.load(maskfile)).get_data()
-except:
+else:
     #2. manually create mask 
-    mask = np.where(func_data > (np.std(func_data, axis=(0, 1, 2))), func_data, 0)
+    mask = func_data > (np.std(func_data, axis=3))
 
     
 #define affine array
