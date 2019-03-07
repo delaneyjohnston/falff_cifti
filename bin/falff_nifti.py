@@ -79,7 +79,6 @@ def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_
 func_img = nib.load(funcfile)
 func_data = func_img.get_data()
 
-
 #if given input of mask, load in mask file
 #OR if not given input of mask, create mask using std 
 if maskfile:
@@ -87,8 +86,10 @@ if maskfile:
     mask = (nib.load(maskfile)).get_data()
 else:
     #2. manually create mask 
-    mask = func_data > (np.std(func_data, axis=3))
-
+    mask = np.std(func_data, axis=3)
+    
+#find indices where mask does not = 0
+indx,indy,indz = np.where(mask != 0)
     
 #define affine array
 affine = func_img.affine
@@ -96,14 +97,11 @@ affine = func_img.affine
 #define x,y,z,t coordinates
 x,y,z,t = func_data.shape
 
-#find indices where mask does not = 0
-indx,indy,indz,indt = np.where(mask != 0)
-
 #create empy array to save values
 falff_vol = np.zeros((x,y,z))
 
 #loop through x,y,z indices, send to calculate_falff func
-for x,y,z, t in zip(indx,indy,indz,indt):
+for x,y,z in zip(indx,indy,indz):
     falff_vol[x,y,z] = calculate_falff(func_data[x,y,z,:], min_low_freq, max_low_freq, min_total_freq, max_total_freq)
     
 #save falff values to nifti file 
