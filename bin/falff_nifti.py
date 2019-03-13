@@ -17,7 +17,7 @@ Options:
   --max-low-freq 0.08  Max low frequency range value Hz [default: 0.08]
   --min-total-freq 0.00  Min total frequency range value Hz [default: 0.00]
   --max-total-freq 0.25  Max total frequency range value Hz [default: 0.25]
-  --mask-file <mask.nii.gz>  Input brain mask 
+  --mask-file <mask.nii.gz>  Input brain mask
 
   --debug  Debug logging
   -h,--help  Print help
@@ -31,77 +31,79 @@ import matplotlib.pyplot as plt
 from docopt import docopt
 import tempfile
 import shutil
-import ciftify.niio
-from ciftify.meants import NibInput
-import ciftify.utils
 from nilearn import plotting, image
-
-class UserSettings():
-    def main():
-        '''this be what this does'''
-	def __init__(arguments):
-     	arguments = docopt(__doc__)
-    	funcfile = arguments['<func.nii.gz>']
-    	outputname = arguments['<output.nii.gz>']
-    	min_low_freq = arguments['--min-low-freq']
-    	max_low_freq = arguments['--max-low-freq']
-    	min_total_freq = arguments['--min-total-freq']
-    	max_total_freq = arguments['--max-total-freq']
-    	maskfile = arguments['--mask-file']
-
-    	DEBUG = arguments['--debug']
-
-    	if DEBUG: print(arguments)
-
-    	#makes a temp dircetory for fake input nifti and fake output nifti
-    	tmpdir = tempfile.mkdtemp()
-    	fake_nifti_input = os.path.join(tmpdir, 'input_fake.nii.gz')
-    	fake_nifti_output = os.path.join(tmpdir, 'output_fake.nii.gz')
-
-    	#convert cifti input file to nifti input file
-    	convert_cifti_to_nifti(funcfile, fake_nifti_input)
-
-    	#run falff on the nifti file
-    	calc_falff_on_nifti(fake_nifti_input, fake_nifti_output, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq)
-
-    	#convert nifti output file to cifti output file 
-    	convert_nifti_to_cifti(fake_nifti_output, funcfile, output_3D, outputname)
-
-    	#remove tmpdir and all it's contents
-    	shutil.rmtree(tmpdir)
-
-    	calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq)
+import subprocess as proc
+import pdb
+import sys
 
 
-def convert_cifti_to_nifti(funcfile, fake_nifti_input):
+def main():
+    '''this be what this does'''
+    arguments = docopt(__doc__)
+    funcfile = arguments['<func.nii.gz>']
+    outputname = arguments['<output.nii.gz>']
+    min_low_freq = arguments['--min-low-freq']
+    max_low_freq = arguments['--max-low-freq']
+    min_total_freq = arguments['--min-total-freq']
+    max_total_freq = arguments['--max-total-freq']
+    maskfile = arguments['--mask-file']
+
+    DEBUG = arguments['--debug']
+
+    if DEBUG: print(arguments)
+
+    #makes a temp dircetory for fake input nifti and fake output nifti
+    tmpdir = tempfile.mkdtemp()
+    print(tmpdir)
+    fake_nifti_input = os.path.join(tmpdir, 'input_fake.nii.gz')
+    fake_nifti_output = os.path.join(tmpdir, 'output_fake.nii.gz')
+    inputfile = funcfile
+
+    #convert cifti input file to nifti input file
+    if 'nii.gz' not in funcfile:
+        convert_cifti_to_nifti(funcfile, fake_nifti_input)
+        inputfile = fake_nifti_input
+
+    output_3D = calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, fake_nifti_output)
+
+    #convert nifti output file to cifti output file
+    if 'nii.gz' not in funcfile:
+        convert_nifti_to_cifti(fake_nifti_output, funcfile, outputname)
+
+    #remove tmpdir and all it's contents
+    shutil.rmtree(tmpdir)
+
+
+def run(cmd):
+    '''
+    Runs a subprocess command:
+
+    Arguments:
+        cmd                     BASH command to Runs
+    Returns:
+
+    '''
+    p = proc.Popen(cmd,stdin=proc.PIPE, stdout=proc.PIPE, shell=True)
+    std, err = p.communicate()
+
+    if p.returncode:
+        print('Connectome workbench crashed with error {}'.format(err))
+        sys.exit(1)
+    return
+
 #if input is cifti - we convert to fake nifti (fake_nifti_input)
 ##convert to nifti
+def convert_cifti_to_nifti(funcfile, fake_nifti_input):
+    run('wb_command -cifti-convert -to-nifti {} {} '.format(funcfile, fake_nifti_input))
+    return fake_nifti_input
 
-    #find settings of input funcfile
-    funcsettings = UserSettings(funcfile)
+def convert_nifti_to_cifti(fake_nifti_output, funcfile, outputname):
+    run('wb_command -cifti-convert -from-nifti {} {} {}'.format(fake_nifti_output, funcfile, outputname))
+    return outputname
 
-    if funcsettings.func.type == "cifti":
-        ciftify.utils.run(['wb_command','-cifti-convert','-to-nifti', funcsettings.func.path, fake_nifti_input])
-        funcfile = fake_nifti_input
-    else:
-        inputfile = funcfile
-    
-    return inputfile
 
-def convert_nifti_to_cifti(fake_nifti_output, funcfile, output_3D, outputname):
 
-    #find settings of input funcfile
-    funcsettings = UserSettings(funcfile)
-
-    if funcsettings.func.type == "cifti":
-        output_3D.to_filename(fake_nifti_output) 
-        ciftify.utils.run(['wb_command','-cifti-convert','-from-nifti', fake_nifti_output, funcsettings.func.path, outputname])
-    else:
-        output_3D.to_filename(outputname)
-
-	
-
-def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq):
+def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, outputname):
     '''
     calculates falff from nifti input
     '''
@@ -110,19 +112,18 @@ def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, 
     func_img = nib.load(inputfile)
     func_data = func_img.get_data()
 
-
     #if given input of mask, load in mask file
-    #OR if not given input of mask, create mask using std 
+    #OR if not given input of mask, create mask using std
     if maskfile:
         #1. given input of mask file
         mask = (nib.load(maskfile)).get_data()
     else:
-        #2. manually create mask 
+        #2. manually create mask
         mask = np.std(func_data, axis=3)
 
     #find indices where mask does not = 0
     indx,indy,indz = np.where(mask != 0)
-    
+
     #define affine array
     affine = func_img.affine
 
@@ -135,11 +136,12 @@ def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, 
     #loop through x,y,z indices, send to calculate_falff func
     for x,y,z in zip(indx,indy,indz):
         falff_vol[x,y,z] = calculate_falff(func_data[x,y,z,:], min_low_freq, max_low_freq, min_total_freq, max_total_freq)
-    
-    #save falff values to nifti file 
+
+    #save falff values to nifti file
     output_3D = nib.Nifti1Image(falff_vol, affine)
-    
-    return output_3D
+    output_3D.to_filename(outputname)
+
+
 
 def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_total_freq):
     ''' this will calculate falff from a timeseries'''
@@ -174,5 +176,5 @@ def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_
     return falff
 
 
-#if __name__=='__main__':
- #   main()
+if __name__=='__main__':
+    main()
