@@ -11,7 +11,6 @@ Arguments:
     <func.nii.gz>  The functional 4D nifti files
     <output.nii.gz>  Output filename
     <maskfile.nii.gz>  A brainmask for the functional file
-    <tempfile.nii>  Temp cifti file to match cifti output conversion
 
 Options:
   --min-low-freq 0.01  Min low frequency range value Hz [default: 0.01]
@@ -19,7 +18,6 @@ Options:
   --min-total-freq 0.00  Min total frequency range value Hz [default: 0.00]
   --max-total-freq 0.25  Max total frequency range value Hz [default: 0.25]
   --mask-file <maskfile.nii.gz>  Input brain mask
-  --cifti-temp-file <tempfile.dscalar.nii> Input cifti temp file dcsalar.nii
 
   --debug  Debug logging
   -h,--help  Print help
@@ -64,6 +62,7 @@ def main():
     #IF INPUT IS NIFTI FILE 
     #sets input funcfile equal to inputfile 
     inputfile = funcfile
+    
 
     #IF INPUT IS CIFTI FILE
     #convert cifti input file to nifti input file
@@ -78,15 +77,15 @@ def main():
     #convert nifti output file to cifti output file
     if 'nii.gz' not in funcfile:
         fake_nifti_output = output_3D
-        convert_nifti_to_cifti(fake_nifti_output, cifti_tempfile, outputname)
-    else:
+        convert_nifti_to_cifti(fake_nifti_output, funcfile, outputname)
+
         #IF INPUT IS NIFTI FILE
+    if 'nii.gz' in funcfile:
         #if funcfile was not cifti file, save as nifti file to output name 
         output_3D.to_filename(outputname)
 
     #remove tmpdir and all it's contents
-    #shutil.rmtree(tmpdir)
-
+    shutil.rmtree(tmpdir)
 
 
 #runs the wb command on separate terminal 
@@ -108,23 +107,17 @@ def run(cmd):
     return
 
 
-
 #if input is cifti - we convert to fake nifti (fake_nifti_input)
 ##convert to nifti
 def convert_cifti_to_nifti(funcfile, fake_nifti_input):
-
     run('wb_command -cifti-convert -to-nifti {} {} '.format(funcfile, fake_nifti_input))
     return fake_nifti_input
 
 
 #if input is cifti - we convert nifti output (fake_nifti_output) back to cifti
 ##convert to cifti
-
-# need temp file to match????
-
-def convert_nifti_to_cifti(fake_nifti_output, cifti_tempfile, outputname):
-
-    run('wb_command -cifti-convert -from-nifti {} {} {}'.format(fake_nifti_output, cifti_tempfile, outputname))
+def convert_nifti_to_cifti(fake_nifti_output, funcfile, outputname):
+    run('wb_command -cifti-convert -from-nifti {} {} {} -reset-scalars'.format(fake_nifti_output, funcfile, outputname))
     return outputname
 
 
