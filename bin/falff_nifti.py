@@ -78,7 +78,7 @@ def main():
     #convert nifti output file to cifti output file
     if 'nii.gz' not in funcfile:
         fake_nifti_output = output_3D
-        convert_nifti_to_cifti(fake_nifti_output, cifti_tempfile, outputname)
+        convert_nifti_to_cifti(fake_nifti_output, funcfile, outputname)
     else:
         #IF INPUT IS NIFTI FILE
         #if funcfile was not cifti file, save as nifti file to output name 
@@ -124,7 +124,7 @@ def convert_cifti_to_nifti(funcfile, fake_nifti_input):
 
 def convert_nifti_to_cifti(fake_nifti_output, cifti_tempfile, outputname):
 
-    run('wb_command -cifti-convert -from-nifti {} {} {}'.format(fake_nifti_output, cifti_tempfile, outputname))
+    run('wb_command -cifti-convert -from-nifti {} {} {} -reset-scalars'.format(fake_nifti_output, cifti_tempfile, outputname))
     return outputname
 
 
