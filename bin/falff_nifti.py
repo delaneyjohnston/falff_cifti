@@ -19,7 +19,7 @@ Options:
   --min-total-freq 0.00  Min total frequency range value Hz [default: 0.00]
   --max-total-freq 0.25  Max total frequency range value Hz [default: 0.25]
   --mask-file <maskfile.nii.gz>  Input brain mask
-  --cifti-temp-file <tempfile.nii> Input cifti temp file dcsalar.nii
+  --cifti-temp-file <tempfile.dscalar.nii> Input cifti temp file dcsalar.nii
 
   --debug  Debug logging
   -h,--help  Print help
@@ -181,7 +181,6 @@ def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_
     freq_scale = np.fft.fftfreq(n, 1/0.5)
 
     #calculates power of fft
-
     mag = (abs(fft_timeseries))**0.5
 
     #finds low frequency range (0.01-0.08) and total frequency range (0.0-0.25)
