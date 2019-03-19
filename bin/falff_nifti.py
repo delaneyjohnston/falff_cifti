@@ -36,7 +36,6 @@ import subprocess as proc
 import pdb
 import sys
 
-
 def main():
     ''''''
     arguments = docopt(__doc__)
@@ -52,12 +51,10 @@ def main():
 
     if DEBUG: print(arguments)
 
-    #makes a temp dircetory for fake input nifti and fake output nifti
+    #makes a temp dircetory for fake input nifti and falff output nifti
     tmpdir = tempfile.mkdtemp()
     print(tmpdir)
-    fake_nifti_input = os.path.join(tmpdir, 'input_fake.nii.gz')
-    fake_nifti_output_dir = os.path.join(tmpdir, 'output_fake.nii.gz') #path
-
+  
     #IF INPUT IS NIFTI FILE 
     #sets input funcfile equal to inputfile 
     inputfile = funcfile
@@ -65,25 +62,21 @@ def main():
     #IF INPUT IS CIFTI FILE
     #convert cifti input file to nifti input file
     if 'nii.gz' not in funcfile:
-        convert_cifti_to_nifti(funcfile, fake_nifti_input)
-        inputfile = fake_nifti_input
+        inputfile = convert_cifti_to_nifti(funcfile, tmpdir)
 
-    fake_nifti_output = calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, fake_nifti_output_dir)
-
+    falff_nifti_output = calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, tmpdir)
 
     #convert nifti output file to cifti output file
     if 'nii.gz' not in funcfile:
-        convert_nifti_to_cifti(fake_nifti_output, funcfile, outputname) 
+        convert_nifti_to_cifti(falff_nifti_output, funcfile, outputname)
 
-        #IF INPUT IS NIFTI FILE
+    #IF INPUT IS NIFTI FILE
+    #if funcfile was not cifti file, save as nifti file to outputname
     if 'nii.gz' in funcfile:
-        #if funcfile was not cifti file, save as nifti file to outputname 
-        run("mv {} {}".format(fake_nifti_output, outputname))
+        run("mv {} {}".format(falff_nifti_output, outputname))
 
     #remove tmpdir and all it's contents
-    #shutil.rmtree(tmpdir)
-
-
+    shutil.rmtree(tmpdir)
 
 #runs the wb command on separate terminal 
 def run(cmd):
@@ -95,8 +88,6 @@ def run(cmd):
     Returns:
 
     '''
-    #print(cmd)
-
     p = proc.Popen(cmd,stdin=proc.PIPE, stdout=proc.PIPE, shell=True)
     std, err = p.communicate()
 
@@ -105,23 +96,20 @@ def run(cmd):
         sys.exit(1)
     return
 
-
 #if input is cifti - we convert to fake nifti (fake_nifti_input)
 ##convert to nifti
-def convert_cifti_to_nifti(funcfile, fake_nifti_input):
+def convert_cifti_to_nifti(funcfile, tmpdir):
+    fake_nifti_input = os.path.join(tmpdir, 'input_fake.nii.gz')
     run('wb_command -cifti-convert -to-nifti {} {} '.format(funcfile, fake_nifti_input))
     return fake_nifti_input
 
-
-#if input is cifti - we convert nifti output (fake_nifti_output) back to cifti
+#if input is cifti - we convert nifti output (falff_nifti_output) back to cifti
 ##convert to cifti
-def convert_nifti_to_cifti(fake_nifti_output, funcfile, outputname):
-    run('wb_command -cifti-convert -from-nifti {} {} {} -reset-scalars'.format(fake_nifti_output, funcfile, outputname)) 
-    return outputname
-
+def convert_nifti_to_cifti(falff_nifti_output, funcfile, outputname):
+    run('wb_command -cifti-convert -from-nifti {} {} {} -reset-scalars'.format(falff_nifti_output, funcfile, outputname))
 
 #takes input files to give to falff function and returns output file 
-def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, fake_nifti_output_dir):
+def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, tmpdir):
     '''
     calculates falff from nifti input and retruns nifti output 
     '''
@@ -156,9 +144,10 @@ def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, 
 
     #save falff values to fake nifti output temp file
     output_3D = nib.Nifti1Image(falff_vol, affine)
-    fake_nifti_output = output_3D.to_filename(fake_nifti_output_dir)
-
-    return fake_nifti_output
+    falff_nifti_output = os.path.join(tmpdir, 'output_fake.nii.gz') #make temp directory for nifti output
+    output_3D.to_filename(falff_nifti_output)
+   
+    return falff_nifti_output
 
 #CALCULATES FALFF
 def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_total_freq):
@@ -190,7 +179,6 @@ def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_
     falff = np.divide(low_pow_sum, total_pow_sum)
 
     return falff
-
 
 if __name__=='__main__':
     main()
