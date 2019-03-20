@@ -18,6 +18,7 @@ Options:
   --min-total-freq 0.00  Min total frequency range value Hz [default: 0.00]
   --max-total-freq 0.25  Max total frequency range value Hz [default: 0.25]
   --mask-file <maskfile.nii.gz>  Input brain mask
+  --calc-alff  Calculates amplitude of low frequency fluctuations (ALFF) instead of fALFF
 
   --debug  Debug logging
   -h,--help  Print help
@@ -46,6 +47,7 @@ def main():
     min_total_freq = arguments['--min-total-freq']
     max_total_freq = arguments['--max-total-freq']
     maskfile = arguments['--mask-file']
+    calc_alff = arguments['--calc-alff']
 
     DEBUG = arguments['--debug']
 
@@ -64,7 +66,7 @@ def main():
     if 'nii.gz' not in funcfile:
         inputfile = convert_cifti_to_nifti(funcfile, tmpdir)
 
-    falff_nifti_output = calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, tmpdir)
+    falff_nifti_output = calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, tmpdir, calc_alff)
 
     #convert nifti output file to cifti output file
     if 'nii.gz' not in funcfile:
@@ -109,7 +111,7 @@ def convert_nifti_to_cifti(falff_nifti_output, funcfile, outputname):
     run('wb_command -cifti-convert -from-nifti {} {} {} -reset-scalars'.format(falff_nifti_output, funcfile, outputname))
 
 #takes input files to give to falff function and returns output file 
-def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, tmpdir):
+def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, tmpdir, calc_alff):
     '''
     calculates falff from nifti input and retruns nifti output 
     '''
@@ -140,7 +142,7 @@ def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, 
 
     #loop through x,y,z indices, send to calculate_falff func
     for x,y,z in zip(indx,indy,indz):
-        falff_vol[x,y,z] = calculate_falff(func_data[x,y,z,:], min_low_freq, max_low_freq, min_total_freq, max_total_freq)
+        falff_vol[x,y,z] = calculate_falff(func_data[x,y,z,:], min_low_freq, max_low_freq, min_total_freq, max_total_freq, calc_alff)
 
     #save falff values to fake nifti output temp file
     output_3D = nib.Nifti1Image(falff_vol, affine)
@@ -150,7 +152,7 @@ def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, 
     return falff_nifti_output
 
 #CALCULATES FALFF
-def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_total_freq):
+def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_total_freq, calc_alff):
     ''' this will calculate falff from a timeseries'''
 
     n = len(timeseries)
@@ -174,11 +176,15 @@ def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_
     #calculates sum of lower power and total power
     low_pow_sum = np.sum(low_power)
     total_pow_sum = np.sum(total_power)
-
+    
+    #claculates alff as the summer of amplitudes within the low frequency range 
+    if calc_alff:
+        calc = low_pow_sum
     #calculates falff as the sum of power in low frequnecy range divided by sum of power in the total frequency range
-    falff = np.divide(low_pow_sum, total_pow_sum)
+    else:
+        calc = np.divide(low_pow_sum, total_pow_sum)
 
-    return falff
+    return calc
 
 if __name__=='__main__':
     main()
