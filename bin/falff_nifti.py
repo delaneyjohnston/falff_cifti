@@ -160,7 +160,7 @@ def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_
     # Takes fast Fourier transform of timeseries
     fft_timeseries = fft(timeseries)
     # Calculates frequency scale
-    freq_scale = np.fft.fftfreq(n, 1/0.5)
+    freq_scale = np.fft.fftfreq(n, 1/1)
 
     # Calculates power of fft
     mag = (abs(fft_timeseries))**0.5
