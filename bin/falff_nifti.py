@@ -34,7 +34,6 @@ import tempfile
 import shutil
 from nilearn import plotting, image
 import subprocess as proc
-import pdb
 import sys
 
 def main():
@@ -53,34 +52,34 @@ def main():
 
     if DEBUG: print(arguments)
 
-    #makes a temp dircetory for fake input nifti and falff output nifti
+    # Makes a temp directory for fake input nifti and falff output nifti
     tmpdir = tempfile.mkdtemp()
     print(tmpdir)
   
-    #IF INPUT IS NIFTI FILE 
-    #sets input funcfile equal to inputfile 
+    # IF INPUT IS A NIFTI FILE 
+    # Sets input funcfile equal to inputfile 
     inputfile = funcfile
     
-    #IF INPUT IS CIFTI FILE
-    #convert cifti input file to nifti input file
+    # IF INPUT IS CIFTI FILE
+    # Convert cifti input file to nifti input file
     if 'nii.gz' not in funcfile:
         inputfile = convert_cifti_to_nifti(funcfile, tmpdir)
 
     falff_nifti_output = calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, tmpdir, calc_alff)
 
-    #convert nifti output file to cifti output file
+    # Convert nifti output file to cifti output file
     if 'nii.gz' not in funcfile:
         convert_nifti_to_cifti(falff_nifti_output, funcfile, outputname)
 
-    #IF INPUT IS NIFTI FILE
-    #if funcfile was not cifti file, save as nifti file to outputname
+    # IF INPUT IS NIFTI FILE
+    # If funcfile was not cifti file, save as nifti file to outputname
     if 'nii.gz' in funcfile:
         run("mv {} {}".format(falff_nifti_output, outputname))
 
-    #remove tmpdir and all it's contents
+    # Remove tmpdir and all contents
     shutil.rmtree(tmpdir)
 
-#runs the wb command on separate terminal 
+# Runs the wb command on separate terminal 
 def run(cmd):
     '''
     Runs a subprocess command:
@@ -98,89 +97,89 @@ def run(cmd):
         sys.exit(1)
     return
 
-#if input is cifti - we convert to fake nifti (fake_nifti_input)
-##convert to nifti
+# If input is cifti - convert to fake nifti (fake_nifti_input)
+# Convert to nifti
 def convert_cifti_to_nifti(funcfile, tmpdir):
     fake_nifti_input = os.path.join(tmpdir, 'input_fake.nii.gz')
     run('wb_command -cifti-convert -to-nifti {} {} '.format(funcfile, fake_nifti_input))
     return fake_nifti_input
 
-#if input is cifti - we convert nifti output (falff_nifti_output) back to cifti
-##convert to cifti
+# If input is cifti - convert nifti output (falff_nifti_output) back to cifti
+# Convert to cifti
 def convert_nifti_to_cifti(falff_nifti_output, funcfile, outputname):
     run('wb_command -cifti-convert -from-nifti {} {} {} -reset-scalars'.format(falff_nifti_output, funcfile, outputname))
 
-#takes input files to give to falff function and returns output file 
+# Takes input files to give to falff function and returns output file 
 def calc_nifti(inputfile, maskfile, min_low_freq, max_low_freq, min_total_freq, max_total_freq, tmpdir, calc_alff):
     '''
     calculates falff from nifti input and retruns nifti output 
     '''
-    #load in func data
+    # Load in functional data
     func_img = nib.load(inputfile)
     func_data = func_img.get_data()
 
-    #if given input of mask, load in mask file
-    #OR if not given input of mask, create mask using std
+    # If given input of mask, load in mask file
+    # OR if not given input of mask, create mask using std
     if maskfile:
-        #1. given input of mask file
+        #1. Given input of mask file
         mask = (nib.load(maskfile)).get_data()
     else:
-        #2. manually create mask
+        #2. Manually create mask
         mask = np.std(func_data, axis=3)
 
-    #find indices where mask does not = 0
+    # Find indices where mask does not = 0
     indx,indy,indz = np.where(mask != 0)
 
-    #define affine array
+    # Define affine array
     affine = func_img.affine
 
-    #define x,y,z,t coordinates
+    # Define x,y,z,t coordinates
     x,y,z,t = func_data.shape
 
-    #create empy array to save values
+    # Create empty array to save values
     falff_vol = np.zeros((x,y,z))
 
-    #loop through x,y,z indices, send to calculate_falff func
+    # Loop through x,y,z indices, send to calculate_falff function
     for x,y,z in zip(indx,indy,indz):
         falff_vol[x,y,z] = calculate_falff(func_data[x,y,z,:], min_low_freq, max_low_freq, min_total_freq, max_total_freq, calc_alff)
 
-    #save falff values to fake nifti output temp file
+    # Save falff values to fake nifti output temp file
     output_3D = nib.Nifti1Image(falff_vol, affine)
-    falff_nifti_output = os.path.join(tmpdir, 'output_fake.nii.gz') #make temp directory for nifti output
+    falff_nifti_output = os.path.join(tmpdir, 'output_fake.nii.gz') # Make temp directory for nifti output
     output_3D.to_filename(falff_nifti_output)
    
     return falff_nifti_output
 
-#CALCULATES FALFF
+# CALCULATES FALFF
 def calculate_falff(timeseries, min_low_freq, max_low_freq, min_total_freq, max_total_freq, calc_alff):
     ''' this will calculate falff from a timeseries'''
 
     n = len(timeseries)
     time = (np.arange(n))*2
 
-    #takes fast fourier transform of timeseries
+    # Takes fast Fourier transform of timeseries
     fft_timeseries = fft(timeseries)
-    #calculates frequency scale
+    # Calculates frequency scale
     freq_scale = np.fft.fftfreq(n, 1/0.5)
 
-    #calculates power of fft
+    # Calculates power of fft
     mag = (abs(fft_timeseries))**0.5
 
-    #finds low frequency range (0.01-0.08) and total frequency range (0.0-0.25)
+    # Finds low frequency range (0.01-0.08) and total frequency range (0.0-0.25)
     low_ind = np.where((float(min_low_freq) <= freq_scale) & (freq_scale <= float(max_low_freq)))
     total_ind = np.where((float(min_total_freq) <= freq_scale) & (freq_scale <= float(max_total_freq)))
 
-    #indexes power to low frequency index, total frequency range
+    # Indexes power to low frequency index, total frequency range
     low_power = mag[low_ind]
     total_power = mag[total_ind]
-    #calculates sum of lower power and total power
+    # Calculates sum of lower power and total power
     low_pow_sum = np.sum(low_power)
     total_pow_sum = np.sum(total_power)
     
-    #claculates alff as the summer of amplitudes within the low frequency range 
+    # Calculates alff as the sum of amplitudes within the low frequency range 
     if calc_alff:
         calc = low_pow_sum
-    #calculates falff as the sum of power in low frequnecy range divided by sum of power in the total frequency range
+    # Calculates falff as the sum of power in low frequnecy range divided by sum of power in the total frequency range
     else:
         calc = np.divide(low_pow_sum, total_pow_sum)
 
