@@ -1,4 +1,5 @@
 # fractional Amplitude Low Frequency Fluctuations (fALFF)
+Delaney Johnston April 2019
 
 
 ## Running 'ciftify_clean_img' and 'falff_nifti.py' script on data using 'cleaned_and_falff_practice.sh' 
