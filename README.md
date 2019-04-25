@@ -7,13 +7,13 @@ Delaney Johnston April 2019
 
 Module load python and connectome-workbench. Input the following to `cleaned_and_falff_practice.sh`: a directory for fMRI pre-processed 
 `dtseries.nii` files (fMRIprep), an output directory for the calculated falff values, and a file with the chosen configurations. 
-Clean output files from `ciftify_clean_img` will be inputted to `falff_nifti.py` and saved in the given output directory as `dscalar.nii` falff files.
+Clean output files from [ciftify_clean_img.py](https://github.com/edickie/ciftify/blob/master/ciftify/bin/ciftify_clean_img.py) will be inputted to [falff_nifti.py](https://github.com/delaneyjohnston/falff_cifti/blob/master/bin/falff_nifti.py) and saved in the given output directory as `dscalar.nii` falff files.
 
 ```
 For Example: './cleaned_and_falff_practice.sh /scratch/colin/MST_open/fmriprep_ciftify /scratch/djohnston/faLFF/practice /scratch/djohnston/faLFF/MST_study/prefALFF_globalsignal.json'
 ```
 
-Options for the `falff_nifti.py` script can be entered by editing the `cleaned_and_falff_practice.sh` script following the docopt options. 
+Options for the [falff_nifti.py](https://github.com/delaneyjohnston/falff_cifti/blob/master/bin/falff_nifti.py) script can be entered by editing the `cleaned_and_falff_practice.sh` script following the docopt options. 
 ALFF calculations can be completed by running `/scratch/djohnston/faLFF/cleaned_and_alff_practice.sh`.
 
 
